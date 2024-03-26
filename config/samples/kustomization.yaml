@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- ecns.easystack_v1_gpunodepolicy.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
