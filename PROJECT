@@ -5,8 +5,8 @@
 domain: io
 layout:
 - go.kubebuilder.io/v4
-projectName: accelerator-config-manager
-repo: github.com/easystack/accelerator-config-manager
+projectName: accelerator-manager
+repo: github.com/easystack/accelerator-manager
 resources:
 - api:
     crdVersion: v1
@@ -14,6 +14,14 @@ resources:
   domain: io
   group: ecns.easystack
   kind: GpuNodePolicy
-  path: github.com/easystack/accelerator-config-manager/api/v1
+  path: github.com/easystack/accelerator-manager/api/v1
+  version: v1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: io
+  group: ecns.easystack
+  kind: NpuNodePolicy
+  path: github.com/easystack/accelerator-manager/api/v1
   version: v1
 version: "3"

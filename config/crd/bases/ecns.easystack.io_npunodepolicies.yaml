@@ -1,0 +1,157 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: npunodepolicies.ecns.easystack.io
+spec:
+  group: ecns.easystack.io
+  names:
+    kind: NpuNodePolicy
+    listKind: NpuNodePolicyList
+    plural: npunodepolicies
+    singular: npunodepolicy
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: The mode of NPU
+      jsonPath: .spec.deviceMode
+      name: Mode
+      type: string
+    - description: The creation date
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: NpuNodePolicy is the Schema for the npunodepolicies API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NpuNodePolicySpec defines the desired state of NpuNodePolicy
+            properties:
+              deviceMode:
+                description: The mode type for configured NPUs. Allowed value "container",
+                  "vm".
+                enum:
+                - container
+                - vm
+                type: string
+                x-kubernetes-validations:
+                - message: deviceMode is immutable
+                  rule: self == oldSelf
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: NodeSelector selects the nodes to be configured
+                type: object
+              priority:
+                description: Priority of the policy, higher priority policies can
+                  override lower ones.
+                maximum: 99
+                minimum: 0
+                type: integer
+              vnpu:
+                properties:
+                  configs:
+                    items:
+                      properties:
+                        device-filter:
+                          items:
+                            type: string
+                          type: array
+                        devices:
+                          items:
+                            type: string
+                          type: array
+                        vnpu-devices:
+                          additionalProperties:
+                            type: string
+                          type: object
+                      required:
+                      - devices
+                      - vnpu-devices
+                      type: object
+                    type: array
+                type: object
+            required:
+            - deviceMode
+            - nodeSelector
+            type: object
+          status:
+            description: NpuNodePolicyStatus defines the observed state of NpuNodePolicy
+            properties:
+              nodes:
+                additionalProperties:
+                  properties:
+                    availableTemplates:
+                      additionalProperties:
+                        type: object
+                      type: object
+                    deviceStatuses:
+                      items:
+                        properties:
+                          cardID:
+                            type: integer
+                          health:
+                            type: string
+                          vnpu:
+                            items:
+                              properties:
+                                containerId:
+                                  type: integer
+                                id:
+                                  type: integer
+                                status:
+                                  type: integer
+                                templateName:
+                                  type: string
+                                vgroupId:
+                                  type: integer
+                              required:
+                              - containerId
+                              - id
+                              - status
+                              - templateName
+                              - vgroupId
+                              type: object
+                            type: array
+                        required:
+                        - cardID
+                        - health
+                        - vnpu
+                        type: object
+                      type: array
+                    syncStatus:
+                      type: string
+                  required:
+                  - syncStatus
+                  type: object
+                description: Nodes record all gpu sync status
+                type: object
+            required:
+            - nodes
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -20,14 +20,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	esv1 "github.com/easystack/accelerator-manager/api/v1"
-	"github.com/easystack/accelerator-manager/internal/controller"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,6 +31,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	esv1 "github.com/easystack/accelerator-manager/api/v1"
+	"github.com/easystack/accelerator-manager/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -52,20 +51,10 @@ func init() {
 
 func main() {
 	var metricsAddr string
-	var enableLeaderElection bool
 	var probeAddr string
-	var renewDeadline time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.DurationVar(&renewDeadline, "leader-lease-renew-deadline", 0,
-		"Set the leader lease renew deadline duration (e.g. \"10s\") of the controller manager. "+
-			"Only enabled when the --leader-elect flag is set. "+
-			"If undefined, the renew deadline defaults to the controller-runtime manager's default RenewDeadline. "+
-			"By setting this option, the LeaseDuration is also set as RenewDealine + 5s.")
 
 	opts := zap.Options{
 		StacktraceLevel: zapcore.PanicLevel,
@@ -83,8 +72,7 @@ func main() {
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "90721dc7.easystack.io",
+		LeaderElection:         false,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -98,34 +86,20 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 	}
 
-	if enableLeaderElection && int(renewDeadline) != 0 {
-		leaseDuration := renewDeadline + 5*time.Second
-
-		options.RenewDeadline = &renewDeadline
-		options.LeaseDuration = &leaseDuration
-	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (&controller.GpuNodePolicyReconciler{
-		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("GpuNodePolicy"),
-		Scheme:    mgr.GetScheme(),
-		Namespace: os.Getenv("NAMESPACE"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "GpuNodePolicy")
-		os.Exit(1)
-	}
-	if err = (&controller.NpuNodePolicyReconciler{
+	ctx := ctrl.SetupSignalHandler()
+	if err = (&controller.NpuConfigReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NpuNodePolicy"),
+		Log:    ctrl.Log.WithName("controllers").WithName("NpuConfig"),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NpuNodePolicy")
+		Node:   os.Getenv("NODE"),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NpuConfig")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
@@ -140,7 +114,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

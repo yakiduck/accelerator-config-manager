@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: gpunodepolicies.ecns.easystack.io
 spec:
   group: ecns.easystack.io
@@ -29,14 +29,19 @@ spec:
         description: GpuNodePolicy is the Schema for the gpunodepolicies API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -44,15 +49,16 @@ spec:
             description: GpuNodePolicySpec defines the desired state of GpuNodePolicy
             properties:
               deviceMode:
-                description: GpuSelector selects the GPUs to be configured GpuSelector
-                  GpuSelector `json:"gpuSelector,omitempty" yaml:"gpuSelector,omitempty"`
-                  The mode type for configured GPUs. Allowed value "default", "vcuda",
-                  "time-slicing", "mig".
+                description: |-
+                  GpuSelector selects the GPUs to be configured
+                  GpuSelector GpuSelector `json:"gpuSelector,omitempty" yaml:"gpuSelector,omitempty"`
+                  The mode type for configured GPUs. Allowed value "default", "vcuda", "time-slicing", "mig", "pass-through".
                 enum:
                 - default
                 - vcuda
                 - time-slicing
                 - mig
+                - pass-through
                 type: string
                 x-kubernetes-validations:
                 - message: deviceMode is immutable
@@ -71,10 +77,10 @@ spec:
                         mig-devices:
                           additionalProperties:
                             type: integer
-                          description: MigConfig holds a map of strings representing
-                            a MigProfile to a count of that profile type. It is meant
-                            to represent the set of MIG profiles (and how many of
-                            a particular type) should be instantiated on a GPU.
+                          description: |-
+                            MigConfig holds a map of strings representing a MigProfile to a count of that profile type.
+                            It is meant to represent the set of MIG profiles (and how many of a
+                            particular type) should be instantiated on a GPU.
                           type: object
                       required:
                       - devices
@@ -171,6 +177,13 @@ spec:
                       - devicePlugin
                       - enabled
                       - migParted
+                      type: object
+                    passThrough:
+                      properties:
+                        enabled:
+                          type: boolean
+                      required:
+                      - enabled
                       type: object
                     timeSlicing:
                       properties:

@@ -1,14 +1,13 @@
 package controller
 
 import (
-	esv1 "github.com/easystack/accelerator-config-manager/api/v1"
+	esv1 "github.com/easystack/accelerator-manager/api/v1"
 	"github.com/go-logr/logr"
 )
 
 type gpuModeManager struct {
-	instance *esv1.GpuNodePolicy
-	mode     esv1.DeviceMode
-	//config -> workloadConfig
+	instance                  *esv1.GpuNodePolicy
+	mode                      esv1.DeviceMode
 	workloadConfigName        string
 	devicePluginConfigName    string
 	devicePluginConfigUpdated bool
@@ -87,16 +86,6 @@ func (m *gpuModeManager) removeGPUModeLabels(node string, labels map[string]stri
 			}
 		}
 	}
-	/*if m.config != gpuWorkloadConfigContainer {
-		m.log.Info("Deleting node label", "NodeName", node, "Label", DevicePluginDefaultConfigLabel)
-		delete(labels, DevicePluginDefaultConfigLabel)
-		modified = true
-	}
-	if m.mode != esv1.MIG {
-		m.log.Info("Deleting node label", "NodeName", node, "Label", MigConfigLabel)
-		delete(labels, MigConfigLabel)
-		modified = true
-	}*/
 	return modified
 }
 
@@ -141,10 +130,6 @@ func removeAllGPUModeLabels(labels map[string]string) bool {
 		delete(labels, ModeManagedByLabel)
 		modified = true
 	}
-	/*if _, ok := labels[ModeDriverVersionLabel]; ok {
-		delete(labels, ModeDriverVersionLabel)
-		modified = true
-	}*/
 	if _, ok := labels[DevicePluginDefaultConfigLabel]; ok {
 		delete(labels, DevicePluginDefaultConfigLabel)
 		modified = true
@@ -166,6 +151,8 @@ func setWorkloadConfig(mode esv1.DeviceMode) string {
 		return gpuWorkloadConfigVcuda
 	case esv1.Default, esv1.TimeSlicing, esv1.MIG:
 		return gpuWorkloadConfigContainer
+	case esv1.PassThrough:
+		return gpuWorkloadConfigVMPassthrough
 	case "":
 		return gpuWorkloadConfigNone
 	}

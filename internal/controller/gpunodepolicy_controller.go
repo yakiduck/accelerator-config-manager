@@ -36,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	dpv1 "github.com/easystack/accelerator-config-manager/api/config/v1"
-	esv1 "github.com/easystack/accelerator-config-manager/api/v1"
+	dpv1 "github.com/easystack/accelerator-manager/api/config/v1"
+	esv1 "github.com/easystack/accelerator-manager/api/v1"
 )
 
 const (
@@ -47,24 +47,20 @@ const (
 	MigConfigLabelValueAllDisabled      = "all-disabled"
 	MigConfigStateLabel                 = "nvidia.com/mig.config.state"
 	MigConfigStateLabelValueSuccess     = "success"
-	//ModeDriverVersionLabel              = "nvidia.com/gpu.deploy.driver.version"
-	ModeManagedByLabel = "ecns.easystack.io/gpu.deploy.managed-by"
+	ModeManagedByLabel                  = "ecns.easystack.io/gpu.deploy.managed-by"
 
 	RELEASEFINALIZERNAME = "release.finalizers.ecns.easystack.io"
 )
 
 const (
-	commonOperandsLabelKey     = "nvidia.com/gpu.deploy.operands"
-	gpuWorkloadConfigLabelKey  = "nvidia.com/gpu.workload.config"
-	gpuWorkloadConfigNone      = "none"
-	gpuWorkloadConfigContainer = "container"
-	gpuWorkloadConfigVcuda     = "vcuda"
+	commonOperandsLabelKey         = "nvidia.com/gpu.deploy.operands"
+	gpuWorkloadConfigLabelKey      = "nvidia.com/gpu.workload.config"
+	gpuWorkloadConfigNone          = "none"
+	gpuWorkloadConfigContainer     = "container"
+	gpuWorkloadConfigVMPassthrough = "vm-passthrough"
+	gpuWorkloadConfigVcuda         = "vcuda"
 
-	gpuProductLabelKey     = "nvidia.com/gpu.product"
-	migManagerLabelKey     = "nvidia.com/gpu.deploy.mig-manager"
-	migCapableLabelKey     = "nvidia.com/mig.capable"
-	migCapableLabelValue   = "true"
-	vgpuHostDriverLabelKey = "nvidia.com/vgpu.host-driver-version"
+	migManagerLabelKey = "nvidia.com/gpu.deploy.mig-manager"
 
 	// DevicePluginDefaultConfigMapName indicates name of ConfigMap containing default device plugin config
 	DevicePluginDefaultConfigMapName = "nvidia-plugin-configs"
@@ -78,6 +74,9 @@ var gpuModeLabels = map[string]map[string]string{
 	},
 	gpuWorkloadConfigContainer: {
 		gpuWorkloadConfigLabelKey: gpuWorkloadConfigContainer,
+	},
+	gpuWorkloadConfigVMPassthrough: {
+		gpuWorkloadConfigLabelKey: gpuWorkloadConfigVMPassthrough,
 	},
 	gpuWorkloadConfigVcuda: {
 		gpuWorkloadConfigLabelKey: gpuWorkloadConfigVcuda,
@@ -95,6 +94,7 @@ type GpuNodePolicyReconciler struct {
 //+kubebuilder:rbac:groups=ecns.easystack.io,resources=gpunodepolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ecns.easystack.io,resources=gpunodepolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ecns.easystack.io,resources=gpunodepolicies/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=configmaps;nodes,verbs=get;list;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -212,6 +212,8 @@ func (r *GpuNodePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// If default need config
 	case esv1.VCUDA:
 		// If gpu manager has config
+	case esv1.PassThrough:
+		// If kubevirt gpu device plugin has config
 	case esv1.TimeSlicing:
 		err = r.setupTimeSlicingMode(ctx, manager)
 		if err != nil {
@@ -628,29 +630,6 @@ func (r *GpuNodePolicyReconciler) RevertMigNodes(ctx context.Context, nodes []co
 	return done
 }
 
-// hasMIGCapableGPU returns true if this node has GPU capable of MIG partitioning.
-/*func hasMIGCapableGPU(labels map[string]string) bool {
-	if value, exists := labels[vgpuHostDriverLabelKey]; exists && value != "" {
-		// vGPU node
-		return false
-	}
-
-	if value, exists := labels[migCapableLabelKey]; exists {
-		return value == migCapableLabelValue
-	}
-
-	// check product label if mig.capable label does not exist
-	if value, exists := labels[gpuProductLabelKey]; exists {
-		if strings.Contains(strings.ToLower(value), "h100") ||
-			strings.Contains(strings.ToLower(value), "a100") ||
-			strings.Contains(strings.ToLower(value), "a30") {
-			return true
-		}
-	}
-
-	return false
-}*/
-
 func InitGpuNodePolicyStatus(manager *gpuModeManager, nodes []corev1.Node) {
 	if manager.instance.Status.Nodes == nil {
 		manager.instance.Status.Nodes = make(map[string]esv1.GpuNodeStatus)
@@ -688,6 +667,7 @@ func UpdateGpuNodePolicyStatus(instance *esv1.GpuNodePolicy, node string, needDP
 		}
 		status.MigMode = nil
 		status.DefaultMode = nil
+		status.PassThroughMode = nil
 		status.VcudaMode = nil
 	case esv1.MIG:
 		if status.MigMode == nil {
@@ -709,6 +689,7 @@ func UpdateGpuNodePolicyStatus(instance *esv1.GpuNodePolicy, node string, needDP
 		}
 		status.TimeSlicingMode = nil
 		status.DefaultMode = nil
+		status.PassThroughMode = nil
 		status.VcudaMode = nil
 	case esv1.Default:
 		if status.DefaultMode == nil {
@@ -717,17 +698,29 @@ func UpdateGpuNodePolicyStatus(instance *esv1.GpuNodePolicy, node string, needDP
 			}
 		}
 		status.TimeSlicingMode = nil
-		status.VcudaMode = nil
 		status.MigMode = nil
+		status.PassThroughMode = nil
+		status.VcudaMode = nil
 	case esv1.VCUDA:
 		if status.VcudaMode == nil {
-			status.VcudaMode = &esv1.VcudaModeStatus{
+			status.VcudaMode = &esv1.GenericModeStatus{
 				Enabled: true,
 			}
 		}
 		status.TimeSlicingMode = nil
 		status.DefaultMode = nil
 		status.MigMode = nil
+		status.PassThroughMode = nil
+	case esv1.PassThrough:
+		if status.PassThroughMode == nil {
+			status.PassThroughMode = &esv1.GenericModeStatus{
+				Enabled: true,
+			}
+		}
+		status.TimeSlicingMode = nil
+		status.DefaultMode = nil
+		status.MigMode = nil
+		status.VcudaMode = nil
 	}
 	instance.Status.Nodes[node] = status
 }

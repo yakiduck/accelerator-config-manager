@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	ecnseasystackv1 "github.com/easystack/accelerator-config-manager/api/v1"
+	ecnseasystackv1 "github.com/easystack/accelerator-manager/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 

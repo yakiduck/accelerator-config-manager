@@ -18,7 +18,7 @@ package v1
 
 import (
 	"github.com/NVIDIA/mig-parted/pkg/types"
-	dpv1 "github.com/easystack/accelerator-config-manager/api/config/v1"
+	dpv1 "github.com/easystack/accelerator-manager/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,9 +29,10 @@ type DeviceMode string
 
 const (
 	Default     DeviceMode = "default"
-	VCUDA       DeviceMode = "vcuda"
 	TimeSlicing DeviceMode = "time-slicing"
 	MIG         DeviceMode = "mig"
+	PassThrough DeviceMode = "pass-through"
+	VCUDA       DeviceMode = "vcuda"
 )
 
 // GpuNodePolicySpec defines the desired state of GpuNodePolicy
@@ -47,10 +48,10 @@ type GpuNodePolicySpec struct {
 	Priority int `json:"priority,omitempty" yaml:"priority,omitempty"`
 	// GpuSelector selects the GPUs to be configured
 	//GpuSelector GpuSelector `json:"gpuSelector,omitempty" yaml:"gpuSelector,omitempty"`
-	// +kubebuilder:validation:Enum=default;vcuda;time-slicing;mig
+	// +kubebuilder:validation:Enum=default;vcuda;time-slicing;mig;pass-through
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="deviceMode is immutable"
-	// The mode type for configured GPUs. Allowed value "default", "vcuda", "time-slicing", "mig".
+	// The mode type for configured GPUs. Allowed value "default", "vcuda", "time-slicing", "mig", "pass-through".
 	Mode DeviceMode `json:"deviceMode" yaml:"deviceMode"`
 
 	VcudaConfig *VcudaConfigSpec `json:"vcuda,omitempty" yaml:"vcuda,omitempty"`
@@ -104,8 +105,9 @@ type GpuNodePolicyStatus struct {
 type GpuNodeStatus struct {
 	TimeSlicingMode *TimeSlicingModeStatus `json:"timeSlicing,omitempty" yaml:"timeSlicing,omitempty"`
 	MigMode         *MigModeStatus         `json:"mig,omitempty"         yaml:"mig,omitempty"`
-	DefaultMode     *DefaultModeStatus     `json:"default,omitempty"       yaml:"default,omitempty"`
-	VcudaMode       *VcudaModeStatus       `json:"vcuda,omitempty"       yaml:"vcuda,omitempty"`
+	DefaultMode     *DefaultModeStatus     `json:"default,omitempty"     yaml:"default,omitempty"`
+	PassThroughMode *GenericModeStatus     `json:"passThrough,omitempty" yaml:"passThrough,omitempty"`
+	VcudaMode       *GenericModeStatus     `json:"vcuda,omitempty"       yaml:"vcuda,omitempty"`
 }
 
 type TimeSlicingModeStatus struct {
@@ -123,7 +125,7 @@ type DefaultModeStatus struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
 }
 
-type VcudaModeStatus struct {
+type GenericModeStatus struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
 }
 

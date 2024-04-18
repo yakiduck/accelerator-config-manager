@@ -1,0 +1,31 @@
+# permissions for end users to edit npunodepolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: npunodepolicy-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: accelerator-manager
+    app.kubernetes.io/part-of: accelerator-manager
+    app.kubernetes.io/managed-by: kustomize
+  name: npunodepolicy-editor-role
+rules:
+- apiGroups:
+  - ecns.easystack.io
+  resources:
+  - npunodepolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ecns.easystack.io
+  resources:
+  - npunodepolicies/status
+  verbs:
+  - get

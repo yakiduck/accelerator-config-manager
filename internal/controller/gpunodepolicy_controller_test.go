@@ -9,8 +9,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	dpv1 "github.com/easystack/accelerator-config-manager/api/config/v1"
-	esv1 "github.com/easystack/accelerator-config-manager/api/v1"
+	dpv1 "github.com/easystack/accelerator-manager/api/config/v1"
+	esv1 "github.com/easystack/accelerator-manager/api/v1"
 )
 
 func TestConvert(t *testing.T) {

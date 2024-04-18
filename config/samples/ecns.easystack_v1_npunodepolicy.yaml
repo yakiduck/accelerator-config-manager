@@ -1,0 +1,26 @@
+apiVersion: ecns.easystack.io/v1
+kind: NpuNodePolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: npunodepolicy
+    app.kubernetes.io/instance: npunodepolicy-sample
+    app.kubernetes.io/part-of: accelerator-manager
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: accelerator-manager
+  name: npunodepolicy-sample
+spec:
+  deviceMode: container
+  vnpu:
+    configs:
+    - devices: ["0", "1"]
+      vnpu-devices:
+        "0": "vir10_3c_32g"
+        "1": "vir10_3c_32g"
+    - devices: ["2"]
+      vnpu-devices:
+        "0": "vir05_1c_16g"
+        "1": "vir05_1c_16g"
+        "2": "vir05_1c_16g"
+        "3": "vir05_1c_16g"
+  nodeSelector:
+    kubernetes.io/hostname: node-39
